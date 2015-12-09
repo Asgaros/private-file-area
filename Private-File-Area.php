@@ -20,7 +20,7 @@ if (basename($_SERVER['PHP_SELF']) == basename (__FILE__)) {
 
 // create Private Posts Area as custom post type
 class private_post {
-	function private_post() {
+	function __construct() {
 		add_action('init', array($this, 'create_post_type'));
 		// http://codex.wordpress.org/Function_Reference/add_action
 	}
