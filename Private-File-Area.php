@@ -58,10 +58,10 @@ class private_post {
 
 		$args = array(
 			'labels' => $labels,
-			'description' => "Only private access",
+			'description' => 'Posts for private access only.',
 			'public' => true,
 			'exclude_from_search' => true,
-			'publicly_queryable' => true,
+			'publicly_queryable' => false,
 			'show_ui' => true,
 			'show_in_nav_menus' => true,
 			'show_in_menu' => true,
@@ -70,7 +70,7 @@ class private_post {
 			'capability_type' => 'post',
 			'hierarchical' => false,
 			'supports' => array('title','editor','thumbnail','excerpt','custom-fields','comments'),
-			'has_archive' => true,
+			'has_archive' => false,
 			'rewrite' => array('slug' => 'private-post', 'with_front' => 'private'),
 			'query_var' => true,
 			'can_export' => true
