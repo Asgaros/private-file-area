@@ -1,13 +1,27 @@
 <?php
 /*
-Plugin Name: Private file area for Collaboration Platform
-Plugin URI: https://chinger-coorp.fb2.frankfurt-university.de/
-Description: This plugin is to show content only for whom the content is intended.
-Version: 1.0.2-Dev
-Author: Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser
-URI: https://chinger-coorp.fb2.frankfurt-university.de/
-License: private
-*/
+  Plugin Name: Private File Area
+  Plugin URI: https://github.com/Asgaros/private-file-area
+  Description: This plugin is to show content only for whom the content is intended.
+  Version: 1.0.2 Development-Version
+  Author: Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser
+  Author URI: https://chinger-coorp.fb2.frankfurt-university.de/
+
+  GNU General Public License, Free Software Foundation <http://creativecommons.org/licenses/GPL/2.0/>
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 // TODO: When file is uploaded to private area directory, it will be shown in media library. But the file will not be linked correctly.
 
@@ -22,24 +36,24 @@ if (basename($_SERVER['PHP_SELF']) == basename (__FILE__)) {
 class private_post {
 	function __construct() {
 		add_action('init', array($this, 'create_post_type'));
-		// http://codex.wordpress.org/Function_Reference/add_action
 	}
 
 	function create_post_type() {
 		$labels = array(
-			'name' => 'Private Post',
+			'name' => 'Private Posts',
 			'singular_name' => 'Private Post',
 			'menu_name' => 'Private Posts',
-			'all_items' => 'All priv. Posts',
+			'name_admin_bar' => 'Private Post',
+			'all_items' => 'All Private Posts',
 			'add_new' => 'Add New',
-			'add_new_item' => 'Add New priv. Post',
-			'edit_item' => 'Edit priv. Post',
-			'new_item' => 'New priv. Post',
-			'view_item' => 'View priv. Post',
-			'search_items' => 'Search priv. Posts',
-			'not_found' =>  'No priv. Posts found',
-			'not_found_in_trash' => 'No priv. Posts found in trash',
-			'parent_item_colon' => 'Parent priv. Post:'
+			'add_new_item' => 'Add new Private Post',
+			'edit_item' => 'Edit Private Post',
+			'new_item' => 'New Private Post',
+			'view_item' => 'View Private Post',
+			'search_items' => 'Search Private Posts',
+			'not_found' =>  'No Private Posts found',
+			'not_found_in_trash' => 'No Private Posts found in trash',
+			'parent_item_colon' => 'Parent Private Post'
 		);
 
 		$args = array(
@@ -63,7 +77,6 @@ class private_post {
 		);
 
 		register_post_type('private_post', $args);
-		// http://codex.wordpress.org/Function_Reference/register_post_type
 	}
 }
 
