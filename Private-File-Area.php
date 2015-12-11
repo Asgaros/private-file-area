@@ -57,23 +57,15 @@ class private_post {
 		);
 
 		$args = array(
-			'labels' => $labels,
-			'description' => "Only private access",
-			'public' => true,
-			'exclude_from_search' => true,
-			'publicly_queryable' => true,
-			'show_ui' => true,
-			'show_in_nav_menus' => true,
-			'show_in_menu' => true,
-			'show_in_admin_bar' => true,
-			'menu_position' => 5,
-			'capability_type' => 'post',
-			'hierarchical' => false,
-			'supports' => array('title','editor','thumbnail','excerpt','custom-fields','comments'),
+		    'labels' => $labels,
+		    'description' => 'Posts for private access only.',
+		    'public' => true,
+		    'exclude_from_search' => true,
+		    'menu_position' => 5,
+		    'menu_icon' => 'dashicons-lock',
+		    'supports' => array('title', 'editor', 'author', 'thumbnail', 'excerpt', 'custom-fields', 'comments'),
 			'has_archive' => true,
-			'rewrite' => array('slug' => 'private-post', 'with_front' => 'private'),
-			'query_var' => true,
-			'can_export' => true
+			'rewrite' => array('slug' => 'private-post', 'with_front' => false)
 		);
 
 		register_post_type('private_post', $args);
