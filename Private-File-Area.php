@@ -3,7 +3,7 @@
   Plugin Name: Private File Area
   Plugin URI: https://github.com/Asgaros/private-file-area
   Description: This plugin is to show content only for whom the content is intended.
-  Version: 1.0.2 Development-Version
+  Version: 1.0.2
   Author: Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser
   Author URI: https://chinger-coorp.fb2.frankfurt-university.de/
 
@@ -25,54 +25,12 @@
 
 // TODO: When file is uploaded to private area directory, it will be shown in media library. But the file will not be linked correctly.
 
-// THIS PLUGIN WORKS ONLY IN COMBINATION WITH PLUGIN "User Groups" Version 1.1.1 | By Katz Web Services, Inc.!
+// THIS PLUGIN WORKS ONLY IN COMBINATION WITH PLUGIN "User Groups" by Katz Web Services, Inc.!
 
 // Disallow direct access to the plugin file for security reasons.
 if (basename($_SERVER['PHP_SELF']) == basename (__FILE__)) {
 	die('Sorry, but you cannot access this page directly.');
 }
-
-// create Private Posts Area as custom post type
-class private_post {
-	function __construct() {
-		add_action('init', array($this, 'create_post_type'));
-	}
-
-	function create_post_type() {
-		$labels = array(
-			'name' => 'Private Posts',
-			'singular_name' => 'Private Post',
-			'menu_name' => 'Private Posts',
-			'name_admin_bar' => 'Private Post',
-			'all_items' => 'All Private Posts',
-			'add_new' => 'Add New',
-			'add_new_item' => 'Add new Private Post',
-			'edit_item' => 'Edit Private Post',
-			'new_item' => 'New Private Post',
-			'view_item' => 'View Private Post',
-			'search_items' => 'Search Private Posts',
-			'not_found' =>  'No Private Posts found',
-			'not_found_in_trash' => 'No Private Posts found in trash',
-			'parent_item_colon' => 'Parent Private Post'
-		);
-
-		$args = array(
-		    'labels' => $labels,
-		    'description' => 'Posts for private access only.',
-		    'public' => true,
-		    'exclude_from_search' => true,
-		    'menu_position' => 5,
-		    'menu_icon' => 'dashicons-lock',
-		    'supports' => array('title', 'editor', 'author', 'thumbnail', 'excerpt', 'custom-fields', 'comments'),
-			'has_archive' => true,
-			'rewrite' => array('slug' => 'private-post', 'with_front' => false)
-		);
-
-		register_post_type('private_post', $args);
-	}
-}
-
-$private_post = new private_post();
 
 // change upload directory for custom post type
 // attachments will now be uploaded to an "uploads" directory within our plugin folder
@@ -152,6 +110,7 @@ class protected_P_F_A {
 
 		// add_filter hooks
 		add_action('init', array($this, 'P_F_A_init'));
+		add_action('init', array($this, 'create_post_type'));
 		//add_filter('404_template', array($this, 'private_filter'));
 		add_filter('parse_query', array($this, 'private_files_only'));
 		// http://codex.wordpress.org/Function_Reference/add_filter
@@ -160,6 +119,39 @@ class protected_P_F_A {
 		$locale = get_locale();
 		load_plugin_textdomain( $this->localization_domain, false, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
 		// http://codex.wordpress.org/Function_Reference/load_plugin_textdomain
+	}
+
+	function create_post_type() {
+		$labels = array(
+			'name' => 'Private Posts',
+			'singular_name' => 'Private Post',
+			'menu_name' => 'Private Posts',
+			'name_admin_bar' => 'Private Post',
+			'all_items' => 'All Private Posts',
+			'add_new' => 'Add New',
+			'add_new_item' => 'Add new Private Post',
+			'edit_item' => 'Edit Private Post',
+			'new_item' => 'New Private Post',
+			'view_item' => 'View Private Post',
+			'search_items' => 'Search Private Posts',
+			'not_found' =>  'No Private Posts found',
+			'not_found_in_trash' => 'No Private Posts found in trash',
+			'parent_item_colon' => 'Parent Private Post'
+		);
+
+		$args = array(
+		    'labels' => $labels,
+		    'description' => 'Posts for private access only.',
+		    'public' => true,
+		    'exclude_from_search' => true,
+		    'menu_position' => 5,
+		    'menu_icon' => 'dashicons-lock',
+		    'supports' => array('title', 'editor', 'author', 'thumbnail', 'excerpt', 'custom-fields', 'comments'),
+			'has_archive' => true,
+			'rewrite' => array('slug' => 'private-post', 'with_front' => false)
+		);
+
+		register_post_type('private_post', $args);
 	}
 
 	// function to show only files from current owner in the media library (author-area)
