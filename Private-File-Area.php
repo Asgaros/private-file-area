@@ -136,7 +136,7 @@ class protected_P_F_A {
 		}
 
 		?>
-		<div class="wrap">
+		<div id="pfa_options" class="wrap">
 			<h2><?php _e('Private File Area', 'pfa'); ?></h2>
 			<?php if ($this->saved): ?>
 		        <div class="updated">
@@ -204,9 +204,10 @@ class protected_P_F_A {
 	}
 
 	public function pfa_admin_enqueue_scripts($hook) {
+		global $post_type;
         $plug_url = plugin_dir_url(__FILE__);
 
-		if (strstr($hook, 'private-file-area') !== false) {
+		if (strstr($hook, 'private-file-area') !== false || (is_admin() && isset($post_type) && $post_type == 'private_post')) {
             wp_enqueue_style('pma_admin_css', $plug_url.'admin.css');
         }
     }
@@ -282,115 +283,93 @@ public function pfa_meta_box() {
 
 // Printing the box content of the meta box
 public function pfa_meta_box_inner() {
-	// NOTE: maby it would nice if subproject "Gruppe Theme" could use css instead we have to &nbsp;'s in this function
 	global $post, $wp_roles;
 
-	// get our options
+	// Get our options
 	$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles', true);
 	$savedusers = get_post_meta($post->ID, 'P_F_A_users', true);
 	$savedoptions = get_post_meta($post->ID, 'pfa_options_page', true);
 
-	// use nonce for verification
-	wp_nonce_field(plugin_basename(__FILE__), 'pfa_meta_box_inner');
-	// http://codex.wordpress.org/Function_Reference/wp_nonce_field
+	// Use nonce for verification
+	wp_nonce_field('pfa_meta_box_inner_action', 'pfa_meta_box_inner');
 
-	//////// by role /////
 	if ($this->options['list_roles']) {
-		echo '<h4>'.__('By User Role:', 'pfa').'</h4>';
-		if (!isset($wp_roles)) {
-			$wp_roles = new WP_Roles();
-		}
-
-		foreach ($wp_roles->role_names as $role => $name) {
-			echo '<input type="checkbox" name="pfa_post_meta_roles[]" value="'.$name.'"';
+		echo '<h4>'.__('Limit access by User Role:', 'pfa').'</h4>';
+		foreach ($wp_roles->role_names as $name) {
+			echo '<label><input type="checkbox" name="pfa_post_meta_roles[]" value="'.$name.'"';
 
 			if (!empty($savedroles) && in_array($name, $savedroles)) {
 				echo ' checked';
 			}
 
-			echo '> '.$name.'&nbsp;&nbsp;&nbsp;';
+			echo '> '.$name.'</label>';
 		}
 	}
 
-	///// by user /////
 	if ($this->options['list_users']) {
-		echo '<h4>'.__('By User Name:', 'pfa').'</h4>';
-		echo '<p style="white-space: nowrap;">';
+		echo '<h4>'.__('Limit access by User Name:', 'pfa').'</h4>';
 		$user = get_current_user_id(); // http://codex.wordpress.org/Function_Reference/get_current_user_id
-		$user_groups = wp_get_object_terms($user, 'user-group', array('fields' => 'all')); // http://codex.wordpress.org/Function_Reference/wp_get_object_terms
+		$user_groupnames = wp_get_object_terms($user, 'user-group', array('fields' => 'names')); // http://codex.wordpress.org/Function_Reference/wp_get_object_terms
 
-		foreach ($user_groups as $user_group) {
+		foreach ($user_groupnames as $groupname) {
 			$blogusers = get_users(array('blog_id' => $GLOBALS['blog_id'], 'orderby'=> 'ID')); // http://codex.wordpress.org/Function_Reference/get_users
-			$usercount = 0;
 
-			echo '<h5>'.esc_html($user_group->name).':</h5>';
-			echo '<ul style="float: left; padding-right: 20px;">';
+			echo '<h5>'.esc_html($groupname).':</h5>';
 
 			foreach ($blogusers as $user) {
 				$groupsForUserCheck = false;
-				$groupsForUser = wp_get_object_terms($user->ID, 'user-group', array('fields' => 'all'));
+				$groupsForUser = wp_get_object_terms($user->ID, 'user-group', array('fields' => 'names'));
 				foreach ($groupsForUser as $groupCheck) {
-					if (esc_html($user_group->name) == esc_html($groupCheck->name)) {
+					if (esc_html($groupname) == esc_html($groupCheck)) {
 						$groupsForUserCheck = true;
 					}
 				}
 
 				if ($groupsForUserCheck) {
-					echo '<li><input type="checkbox" name="P_F_A_users[]" value="'.$user->ID.'"';
+					echo '<label><input type="checkbox" name="P_F_A_users[]" value="'.$user->ID.'"';
 					if (!empty($savedusers) && in_array($user->ID, $savedusers)) {
 						echo ' checked';
 					}
-					echo '> '.$user->display_name.'&nbsp;';
-
-					// get group by user id
-					$user_groups_list = wp_get_object_terms($user->ID, 'user-group', array('fields' => 'all'));
-					foreach ($user_groups_list as $group) {
-						echo '('.esc_html($group->name).')&nbsp;';
-					}
-					echo '</li>';
-					$usercount++; // counter for nicer display
-					if ($usercount > 5) {
-						echo '</ul><ul style="float: left; padding-right: 20px;">';
-						$usercount = 0;
-					}
+					echo '> '.$user->display_name.'</label>';
 				}
 			}
-
-			echo '</ul><div style="clear:both;"></div>';
 		}
 	}
 
-		/////// other_options ///////
+	echo '<h4>'.__('Limit access by login status:', 'pfa').'</h4>';
+	echo '<label><input type="checkbox" name="pfa_options_page[logged]" value="1"';
+	if (isset($savedoptions['logged']) && $savedoptions['logged'] == 1){
+		echo ' checked';
+	}
+	echo '> '.__('Logged in users only', 'pfa').'</label>';
 
-		// logged-in only
-		echo '<h4>'.__('logged in users only:','pfa').'</h4>';
-		echo '<input type="checkbox" name="pfa_options_page[logged]" value="1"';
-		if (isset($savedoptions['logged']) && $savedoptions['logged'] == 1){
-			echo ' checked';
-		}
-		echo '> '.__('If this box is checked then content will show only to logged-in users and everyone else will get the blocked message','pfa');
+	echo '<label><input type="checkbox" name="pfa_options_page[non_logged]" value="1"';
+	if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1){
+		echo ' checked';
+	}
+	echo '> '.__('Non logged in users only', 'pfa').'</label>';
 
-		// none logged-in
-		echo '<h4>'.__('None logged in users only:','pfa').'</h4>';
-		echo '<input type="checkbox" name="pfa_options_page[non_logged]" value="1"';
-		if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1){
-			echo ' checked';
-		}
-		echo '> '.__('If this box is checked then content will show only to non-logged in visitors and everyone else will get the blocked message','pfa');
-		echo '<h4>'.__('Content Blocked message:','pfa').'</h4>';
-		echo '<textarea rows="3" cols="70" name="P_F_A_message" id="P_F_A_message">'.get_post_meta($post->ID, 'P_F_A_message',true).'</textarea><br/>'.__('This message will be shown to anyone who is not on the list above.<br/>','pfa');
-		// shortcodes explaination
-		echo '<h4>'.__('Shortcode:','pfa').'</h4><p>'.__('You can use a shortcode','pfa').' <pre>[PFA]</pre> '.__('which accepts the following parameters:','pfa').'</p><ul>';
-		echo '<li>user_id - '.__('specific user ids form more then one separate by comma','pfa').'</li>';
-		echo '<li>user_name - '.__('specific user names form more then one separate by comma','pfa').'</li>';
-		echo '<li>user_role - '.__('specific user role form more then one separate by comma','pfa').'</li>';
-		echo '<li>blocked_message - '.__('specific Content Blocked message','pfa').'</li></ul><p>'.__('eg:','pfa').'</p>
-		<pre>[PFA user_name="Dimitri Waechter", "Armin Fuhrmann"]content goes here[/PFA]</pre><br/>
-		<pre>[PFA user_id=1,2,3]content goes here[/PFA]</pre><br/>
-		<pre>[PFA user_role=Editor,Author]content goes here[/PFA]</pre><br/>';
-		echo __('Or in any combination like...','psa');
-		echo '<pre>[PFA user_role="Administrator" blocked_message="admins only!"]'.__('admin content goes here','pfa').'[/PFA]</pre>';
-	} 	// end pfa_meta_box_inner
+	echo '<h4>'.__('Content Blocked message:', 'pfa').'</h4>';
+	echo '<textarea name="P_F_A_message" id="P_F_A_message">'.get_post_meta($post->ID, 'P_F_A_message', true).'</textarea><br/>';
+	echo __('This message will be shown to anyone who is not on the list above.', 'pfa');
+
+	// shortcodes explaination
+	echo '<h4>'.__('Shortcode:', 'pfa').'</h4>';
+	echo '<p>'.__('You can use a shortcode','pfa').' <b>[PFA]</b> '.__('which accepts the following parameters:', 'pfa').'</p>';
+	echo '<p>';
+		echo '<b>user_id:</b> '.__('specific user ids form more then one separate by comma', 'pfa').'<br />';
+		echo '<b>user_name:</b> '.__('specific user names form more then one separate by comma', 'pfa').'<br />';
+		echo '<b>user_role:</b> '.__('specific user role form more then one separate by comma', 'pfa').'<br />';
+		echo '<b>blocked_message:</b> '.__('specific Content Blocked message', 'pfa');
+	echo '</p>';
+	echo '<p><b>'.__('Examples:', 'pfa').'</b>';
+		echo '<pre>[PFA user_name="Dimitri Waechter", "Armin Fuhrmann"]content goes here[/PFA]</pre>';
+		echo '<pre>[PFA user_id=1,2,3]content goes here[/PFA]</pre>';
+		echo '<pre>[PFA user_role=Editor,Author]content goes here[/PFA]</pre>';
+		echo __('Or in any combination like ...', 'psa');
+		echo '<pre>[PFA user_role="Administrator" blocked_message="admins only!"]'.__('admin content goes here', 'pfa').'[/PFA]</pre>';
+	echo '</p>';
+}
 
 // save custom data if post is saved
 function Private_file_area_box_inner_save( $post_id ) {
@@ -398,7 +377,7 @@ function Private_file_area_box_inner_save( $post_id ) {
 		  // verify if this came from our screen and with proper authorization,
 		  // because save_post can be triggered at other times
 		if (isset($_POST['pfa_meta_box_inner'])){
-			if ( !wp_verify_nonce( $_POST['pfa_meta_box_inner'], plugin_basename(__FILE__) ) )
+			if ( !wp_verify_nonce( $_POST['pfa_meta_box_inner'], 'pfa_meta_box_inner_action' ) )
 				return $post_id;
 		}else{
 			return $post_id;
