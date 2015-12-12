@@ -147,7 +147,7 @@ class protected_P_F_A {
 				<h3><?php _e('General settings:', 'pfa'); ?></h3>
 				<p>
 		            <label for="blocked_message"><?php _e('Global Blocked message:', 'pfa'); ?></label>
-		            <input type="text" name="blocked_message" value="<?php echo stripslashes($this->options['blocked_message']); ?>" />
+		            <textarea name="blocked_message"><?php echo stripslashes($this->options['blocked_message']); ?></textarea>
 		        </p>
 				<p>
 		            <label for="run_on_the_content"><?php _e('Use with "the_content" hook:', 'pfa'); ?></label>

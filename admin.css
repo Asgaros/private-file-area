@@ -2,6 +2,7 @@
 #pfa_meta_box label {
     width: 200px;
     display: inline-block;
+    vertical-align: top;
 }
 
 #pfa_options input[type="text"] {
@@ -12,7 +13,8 @@
     margin-left: 20px;
 }
 
+#pfa_options textarea,
 #pfa_meta_box textarea {
-    width: 100%;
+    width: 500px;
     height: 100px;
 }
