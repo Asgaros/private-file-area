@@ -3,9 +3,10 @@
   Plugin Name: Private File Area
   Plugin URI: https://github.com/Asgaros/private-file-area
   Description: This plugin is to show content only for whom the content is intended.
-  Version: 1.0.2
+  Version: 1.0.3 Development-Version
   Author: Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser
   Author URI: https://chinger-coorp.fb2.frankfurt-university.de/
+  Text Domain: pfa
 
   GNU General Public License, Free Software Foundation <http://creativecommons.org/licenses/GPL/2.0/>
   This program is free software; you can redistribute it and/or modify
@@ -82,20 +83,22 @@ function private_custom_upload_dir($path) {
 
 
 
-
-// we need a class for our Private File Area
-
 class protected_P_F_A {
-	// used as localization domain name
-	// we need this if we use Plugin codestyling-localization for translations
-	// to translate a string within the Plugins-content use e.g. "echo __('Text to translate',pfa');"
-	var $localization_domain = "pfa";
+	var $saved = false;
+	var $localization_domain = 'pfa';
+	var $options = array();
+	var $options_default = array(
+		'blocked_message' => '',
+		'list_users' => true,
+		'list_roles' => true,
+		'run_on_the_content' => true,
+		'run_on_the_excerpt' => false
+	);
 
-	// constructor for our class
 	function __construct() {
-		// define the custom box
-		add_action('add_meta_boxes', array($this, 'Private_file_area_box'));
-		// http://codex.wordpress.org/Function_Reference/add_action
+		$this->options = array_merge($this->options_default, get_option('pfa_options', array()));
+
+		add_action('add_meta_boxes', array($this, 'pfa_meta_box'));
 
 		// save meta box
 		add_action('save_post', array($this, 'Private_file_area_box_inner_save'));
@@ -103,10 +106,10 @@ class protected_P_F_A {
 		// add shortcodes
 		add_shortcode('PFA', array($this, 'Private_file_area_shortcode')); // http://codex.wordpress.org/Function_Reference/add_shortcode
 
-		// options page for admins only
-		add_action('admin_menu', array($this, 'admin_menu'));
-		//add_action('admin_menu', array($this, 'privatemenu'));
-		add_action('admin_init', array($this, 'P_F_A_admin_init'));
+		// Admin options page
+		add_action('admin_menu', array($this, 'pfa_admin_page'));
+		add_action('admin_init', array($this, 'pfa_save_settings'));
+		add_action('admin_enqueue_scripts', array($this, 'pfa_admin_enqueue_scripts'));
 
 		// add_filter hooks
 		add_action('init', array($this, 'P_F_A_init'));
@@ -120,6 +123,93 @@ class protected_P_F_A {
 		load_plugin_textdomain( $this->localization_domain, false, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
 		// http://codex.wordpress.org/Function_Reference/load_plugin_textdomain
 	}
+
+	// Administration menu
+	public function pfa_admin_page() {
+		add_options_page(__('Private File Area', 'pfa'), __('Private File Area', 'pfa'), 'manage_options', 'private-file-area', array($this, 'pfa_admin_options_page'));
+	}
+
+	// Options page
+	public function pfa_admin_options_page() {
+		if (!current_user_can('manage_options')) {
+			wp_die(__('You are not allowed to access this page.', 'pfa'));
+		}
+
+		?>
+		<div class="wrap">
+			<h2><?php _e('Private File Area', 'pfa'); ?></h2>
+			<?php if ($this->saved): ?>
+		        <div class="updated">
+		            <p><?php _e('Your options have been saved.', 'asgarosforum'); ?></p>
+		        </div>
+		    <?php endif; ?>
+			<form action="" method="post">
+				<h3><?php _e('General settings:', 'pfa'); ?></h3>
+				<p>
+		            <label for="blocked_message"><?php _e('Global Blocked message:', 'pfa'); ?></label>
+		            <input type="text" name="blocked_message" value="<?php echo stripslashes($this->options['blocked_message']); ?>" />
+		        </p>
+				<p>
+		            <label for="run_on_the_content"><?php _e('Use with "the_content" hook:', 'pfa'); ?></label>
+		            <input type="checkbox" name="run_on_the_content" <?php if ($this->options['run_on_the_content']) { echo 'checked'; } ?> />
+		        </p>
+				<p>
+		            <label for="run_on_the_excerpt"><?php _e('Use with "the_excerpt" hook:', 'pfa'); ?></label>
+		            <input type="checkbox" name="run_on_the_excerpt" <?php if ($this->options['run_on_the_excerpt']) { echo 'checked'; } ?> />
+		        </p>
+
+				<h3><?php _e('MetaBox settings:', 'pfa'); ?></h3>
+				<p>
+		            <label for="list_users"><?php _e('List user names:', 'pfa'); ?></label>
+		            <input type="checkbox" name="list_users" <?php if ($this->options['list_users']) { echo 'checked'; } ?> />
+					<small><?php _e('Sites with a large number of users should uncheck this option.', 'pfa'); ?></small>
+		        </p>
+				<p>
+		            <label for="list_roles"><?php _e('List user roles:', 'pfa'); ?></label>
+		            <input type="checkbox" name="list_roles" <?php if ($this->options['list_roles']) { echo 'checked'; } ?> />
+					<small><?php _e('Sites with a large number of user roles should uncheck this option.', 'pfa'); ?></small>
+		        </p>
+				<p class="submit">
+					<input type="submit" name="pfa_options_submit" class="button-primary" value="<?php _e('Save Options', 'pfa'); ?>" />
+				</p>
+			</form>
+		</div>
+		<?php
+	}
+
+	public function pfa_save_settings() {
+		if (isset($_POST['pfa_options_submit']) && !empty($_POST['pfa_options_submit'])) {
+	        $saved_ops = array();
+
+	        foreach ($this->options_default as $k => $v) {
+	            if (isset($_POST[$k]) && !empty($_POST[$k])) {
+	                if (is_bool($v)) {
+	                    $saved_ops[$k] = true;
+	                } else {
+	                    $saved_ops[$k] = esc_sql(stripslashes($_POST[$k]));
+	                }
+	            } else {
+	                if (is_bool($v)) {
+	                    $saved_ops[$k] = false;
+	                } else {
+	                    $saved_ops[$k] = '';
+	                }
+	            }
+	        }
+
+	        update_option('pfa_options', $saved_ops);
+			$this->options = array_merge($this->options_default, get_option('pfa_options', array()));
+			$this->saved = true;
+		}
+	}
+
+	public function pfa_admin_enqueue_scripts($hook) {
+        $plug_url = plugin_dir_url(__FILE__);
+
+		if (strstr($hook, 'private-file-area') !== false) {
+            wp_enqueue_style('pma_admin_css', $plug_url.'admin.css');
+        }
+    }
 
 	function create_post_type() {
 		$labels = array(
@@ -169,15 +259,13 @@ class protected_P_F_A {
 
 	// init for P_F_A
 	public function P_F_A_init() {
-		$options = $this->P_F_A_get_option();
-
-		if ($options['run_on_the_content']) {
+		if ($this->options['run_on_the_content']) {
 			// hook the_content to filter users
 			add_filter('the_content', array($this, 'Private_file_area_filter'));
 			// http://codex.wordpress.org/Function_Reference/add_filter
 		}
 
-		if ($options['run_on_the_excerpt']) {
+		if ($this->options['run_on_the_excerpt']) {
 			// hook the_excerpt to filter users
 			add_filter('the_excerpt', array($this, 'Private_file_area_filter'));
 		}
@@ -187,182 +275,34 @@ class protected_P_F_A {
 		// http://codex.wordpress.org/Function_Reference/do_action
 	}
 
-// Administration initialization
-public function P_F_A_admin_init() {
-	register_setting('P_F_A_Options', 'P_F_A', array($this, 'P_F_A_validate_options')); // http://codex.wordpress.org/Function_Reference/register_setting
-	$this->P_F_A_get_option();
+// Adding a meta box to the private_post edit screen
+public function pfa_meta_box() {
+	add_meta_box('pfa_meta_box', __('Accessibility settings', 'pfa'), array($this, 'pfa_meta_box_inner'), 'private_post');
 }
 
-function P_F_A_validate_options($i) {
-	return $i;
-}
-
-// Administration menu
-public function admin_menu() {
-	add_options_page('Private File Area', 'Private File Area', 'manage_options', 'ba_P_F_A', array($this, 'P_F_A_options')); // http://codex.wordpress.org/Function_Reference/add_options_page
-}
-
-// Options page
-public function P_F_A_options() {
-	if (!current_user_can('manage_options')) { // http://codex.wordpress.org/Function_Reference/current_user_can
-		wp_die(__('You do not have sufficient permissions to access this page.')); // http://codex.wordpress.org/Function_Reference/wp_die
-	}
-	?>
-	<div class="wrap">
-		<h2><?php echo __('Private File Area', 'pfa'); ?></h2>
-		<form method="post" action="options.php">
-			<?php
-			settings_fields('P_F_A_Options'); // http://codex.wordpress.org/Function_Reference/settings_fields
-			$options = $this->P_F_A_get_option();
-			?>
-			<h3><?php echo __('General settings:', 'pfa'); ?></h3>
-			<table class="form-table">
-			<tr valign="top">
-			<th scope="row"><?php echo __('Global Blocked message:', 'pfa'); ?></th>
-			<td><textarea type="text" name="P_F_A[b_massage]" ><?php echo $options['b_massage']; ?></textarea><br />
-			<?php _e('<small>If set in a metabox the it overwrites this message for that secific post/page.</small>', 'pfa'); ?></td></tr>
-			<tr valign="top">
-			<th scope="row"><?php echo __('Use with "the_content" hook?', 'pfa'); ?></th>
-			<td><input type="checkbox" name="P_F_A[run_on_the_content]" value="true" <?php echo ($options['run_on_the_content']) ? 'checked="checked"': ''; ?> />
-			<?php _e('<small>(default checked)</small>', 'pfa'); ?></td>
-			</tr>
-			<tr valign="top">
-			<th scope="row"><?php echo __('Use with "the_excerpt" hook?', 'pfa'); ?></th>
-			<td><input type="checkbox" name="P_F_A[run_on_the_excerpt]" value="true" <?php echo ($options['run_on_the_excerpt']) ? 'checked="checked"': ''; ?> />
-			<?php _e('<small>Check to run on archive/tags/category pages. (default unchecked)</small>', 'pfa'); ?></td>
-			</tr>
-			</table>
-			<h3><?php echo __('MetaBox settings:', 'pfa'); ?></h3>
-			<table class="form-table">
-			<tr valign="top">
-			<th scope="row"><?php echo __('list user names?', 'pfa'); ?></th>
-			<td><input type="checkbox" name="P_F_A[list_users]" value="true" <?php echo ($options['list_users']) ? 'checked="checked"': ''; ?> />
-			<?php _e('<small>Sites with a large number of users should uncheck this option. (default checked)</small>', 'pfa'); ?></td>
-			</tr>
-			<tr valign="top">
-			<th scope="row"><?php echo __('list user roles?', 'pfa'); ?></th>
-			<td><input type="checkbox" name="P_F_A[list_roles]" value="true" <?php echo ($options['list_roles']) ? 'checked="checked"': ''; ?> />
-			<?php _e('<small>Sites with a large number of roles should uncheck this option. (default checked)</small>', 'pfa'); ?></td>
-			</tr>
-			</table>
-			<div>
-			<?php echo '<h3>'.__('Shortcode:', 'pfa').'</h3><p>'.__('You can use a shortcode', 'pfa').' <pre>[PFA]</pre> '.__('which accepts the following parameters:', 'pfa').'</p><ul>';
-				echo '<li>user_id: '.__('specific user ids form more then one separate by comma', 'pfa').'</li>';
-				echo '<li>user_name: '.__('specific user names form more then one separate by comma', 'pfa').'</li>';
-				echo '<li>user_role: '.__('specific user role form more then one separate by comma', 'pfa').'</li>';
-				echo '<li>blocked_message: '.__('specific Content Blocked message', 'pfa').'</li></ul><p>'.__('eg:', 'pfa').'</p>
-				<pre>[PFA user_id=1,2,3]content goes here[/PFA]</pre>
-				<pre>[PFA user_name=Vitaly,Dimitri,Armin]content goes here[/PFA]</pre>
-				<pre>[PFA user_role=Editor,Author]content goes here[/PFA]</pre>';
-				echo __('Or in any combination like ...', 'psa');
-				echo '<pre>[PFA user_role="Administrator" blocked_message="admins only!"]'.__('admin content goes here', 'pfa').'[/PFA]</pre>';
-			?>
-			</div>
-			<p class="submit">
-			<input type="submit" class="button-primary" value="<?php _e('Save Changes', 'pfa'); ?>" />
-			</p>
-		</form>
-	</div>
-	<?php
-}
-
-// options
-public function P_F_A_get_option(){
-		$temp = array('b_massage' => '',
-		'list_users' => true,
-		'list_roles' => true,
-		'run_on_the_content' => true,
-		'run_on_the_excerpt' => false
-		); // end array $temp
-
-		$i = get_option('P_F_A');
-		// http://codex.wordpress.org/Function_Reference/get_option
-		if (!empty($i)){
-			if (isset($i['run_on_the_content']) && $i['run_on_the_content']){
-				$temp['run_on_the_content'] = true;
-			}else{
-				$temp['run_on_the_content'] = false;
-			}
-
-			if (isset($i['run_on_the_excerpt']) && $i['run_on_the_excerpt']){
-				$temp['run_on_the_excerpt'] = true;
-			}else{
-				$temp['run_on_the_excerpt'] = false;
-			}
-
-			if (isset($i['list_users']) && $i['list_users']){
-				$temp['list_users'] = true;
-			}else{
-				$temp['list_users'] = false;
-			}
-
-			if (isset($i['list_roles']) && $i['list_roles']){
-				$temp['list_roles'] = true;
-			}else{
-				$temp['list_roles'] = false;
-			}
-
-			if (isset($i['b_massage'])){
-				$temp['b_massage'] = $i['b_massage'];
-			}
-		} // end if !empty($i)
-
-		update_option('P_F_A', $temp);
-		// http://codex.wordpress.org/Function_Reference/update_option
-		// or delete_option('P_F_A');
-
-		return $temp;
-	} // end P_F_A_get_option()
-
-// adding a box to the main column on the custom post type edit screens
-public function Private_file_area_box() {
-	// http://codex.wordpress.org/Function_Reference/add_meta_box
-	add_meta_box('Private_file_area', __('Private file area box'), array($this, 'Private_file_area_box_inner'), 'private_post');
-	add_meta_box('Private_file_area', __('Private file area box'), array($this, 'Private_file_area_box_inner'), 'page');
-
-	// add metabox to custom post types
-	$args = array(
-		'public' => true,
-		'_builtin' => false
-	);
-
-	// add metabox to custom post types edit screen
-	$output = 'names'; // names or objects (names is default)
-	$operator = 'and'; // 'and' or 'or'
-	$post_types = get_post_types($args, $output, $operator);
-	// http://codex.wordpress.org/Function_Reference/get_post_types
-
-	foreach ($post_types as $post_type) {
-		add_meta_box('Private_file_area', __('Private file area box', 'pfa'), array($this, 'Private_file_area_box_inner'), $post_type);
-	}
-}
-
-// printing the box content
-public function Private_file_area_box_inner() {
+// Printing the box content of the meta box
+public function pfa_meta_box_inner() {
 	// NOTE: maby it would nice if subproject "Gruppe Theme" could use css instead we have to &nbsp;'s in this function
 	global $post, $wp_roles;
 
 	// get our options
-	$options = $this->P_F_A_get_option('P_F_A');
-	$savedroles = get_post_meta($post->ID, 'P_F_A_roles', true);
+	$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles', true);
 	$savedusers = get_post_meta($post->ID, 'P_F_A_users', true);
-	$savedoptions = get_post_meta($post->ID, 'P_F_A_options', true);
+	$savedoptions = get_post_meta($post->ID, 'pfa_options_page', true);
 
 	// use nonce for verification
-	wp_nonce_field(plugin_basename(__FILE__), 'Private_file_area_box_inner');
+	wp_nonce_field(plugin_basename(__FILE__), 'pfa_meta_box_inner');
 	// http://codex.wordpress.org/Function_Reference/wp_nonce_field
 
-	echo __('Select users to show this content to.', 'pfa');
-
 	//////// by role /////
-	if ($options['list_roles']) {
+	if ($this->options['list_roles']) {
 		echo '<h4>'.__('By User Role:', 'pfa').'</h4>';
 		if (!isset($wp_roles)) {
 			$wp_roles = new WP_Roles();
 		}
 
 		foreach ($wp_roles->role_names as $role => $name) {
-			echo '<input type="checkbox" name="P_F_A_roles[]" value="'.$name.'"';
+			echo '<input type="checkbox" name="pfa_post_meta_roles[]" value="'.$name.'"';
 
 			if (!empty($savedroles) && in_array($name, $savedroles)) {
 				echo ' checked';
@@ -373,7 +313,7 @@ public function Private_file_area_box_inner() {
 	}
 
 	///// by user /////
-	if ($options['list_users']) {
+	if ($this->options['list_users']) {
 		echo '<h4>'.__('By User Name:', 'pfa').'</h4>';
 		echo '<p style="white-space: nowrap;">';
 		$user = get_current_user_id(); // http://codex.wordpress.org/Function_Reference/get_current_user_id
@@ -424,7 +364,7 @@ public function Private_file_area_box_inner() {
 
 		// logged-in only
 		echo '<h4>'.__('logged in users only:','pfa').'</h4>';
-		echo '<input type="checkbox" name="P_F_A_options[logged]" value="1"';
+		echo '<input type="checkbox" name="pfa_options_page[logged]" value="1"';
 		if (isset($savedoptions['logged']) && $savedoptions['logged'] == 1){
 			echo ' checked';
 		}
@@ -432,7 +372,7 @@ public function Private_file_area_box_inner() {
 
 		// none logged-in
 		echo '<h4>'.__('None logged in users only:','pfa').'</h4>';
-		echo '<input type="checkbox" name="P_F_A_options[non_logged]" value="1"';
+		echo '<input type="checkbox" name="pfa_options_page[non_logged]" value="1"';
 		if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1){
 			echo ' checked';
 		}
@@ -450,15 +390,15 @@ public function Private_file_area_box_inner() {
 		<pre>[PFA user_role=Editor,Author]content goes here[/PFA]</pre><br/>';
 		echo __('Or in any combination like...','psa');
 		echo '<pre>[PFA user_role="Administrator" blocked_message="admins only!"]'.__('admin content goes here','pfa').'[/PFA]</pre>';
-	} 	// end Private_file_area_box_inner
+	} 	// end pfa_meta_box_inner
 
 // save custom data if post is saved
 function Private_file_area_box_inner_save( $post_id ) {
 		global $post;
 		  // verify if this came from our screen and with proper authorization,
 		  // because save_post can be triggered at other times
-		if (isset($_POST['Private_file_area_box_inner'])){
-			if ( !wp_verify_nonce( $_POST['Private_file_area_box_inner'], plugin_basename(__FILE__) ) )
+		if (isset($_POST['pfa_meta_box_inner'])){
+			if ( !wp_verify_nonce( $_POST['pfa_meta_box_inner'], plugin_basename(__FILE__) ) )
 				return $post_id;
 		}else{
 			return $post_id;
@@ -468,29 +408,29 @@ function Private_file_area_box_inner_save( $post_id ) {
 		  if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE )
 			  return $post_id;
 		  // OK, we're authenticated: we need to find and save the data
-		$savedroles = get_post_meta($post_id, 'P_F_A_roles',true);
+		$savedroles = get_post_meta($post_id, 'pfa_post_meta_roles',true);
 		$savedusers = get_post_meta($post_id, 'P_F_A_users',true);
-		$savedoptions = get_post_meta($post->ID, 'P_F_A_options',true);
+		$savedoptions = get_post_meta($post->ID, 'pfa_options_page',true);
 		// http://codex.wordpress.org/Function_Reference/get_post_meta
 
-		if (isset($_POST['P_F_A_options']) && !empty($_POST['P_F_A_options'] )){
-			foreach ($_POST['P_F_A_options'] as $key => $value ){
+		if (isset($_POST['pfa_options_page']) && !empty($_POST['pfa_options_page'] )){
+			foreach ($_POST['pfa_options_page'] as $key => $value ){
 				$new_savedoptions[$key] = $value;
 			}
-			update_post_meta($post_id, 'P_F_A_options', $new_savedoptions);
+			update_post_meta($post_id, 'pfa_options_page', $new_savedoptions);
 		// http://codex.wordpress.org/Function_Reference/update_post_meta
 		}else{
-			 delete_post_meta($post_id, 'P_F_A_options');
+			 delete_post_meta($post_id, 'pfa_options_page');
 		// http://codex.wordpress.org/Function_Reference/delete_post_meta
 		}
-		if (isset($_POST['P_F_A_roles']) && !empty($_POST['P_F_A_roles'] )){
-			foreach ($_POST['P_F_A_roles'] as $role){
+		if (isset($_POST['pfa_post_meta_roles']) && !empty($_POST['pfa_post_meta_roles'] )){
+			foreach ($_POST['pfa_post_meta_roles'] as $role){
 				$new_roles[] = $role;
 			}
-			update_post_meta($post_id, 'P_F_A_roles', $new_roles);
+			update_post_meta($post_id, 'pfa_post_meta_roles', $new_roles);
 		}else{
 			if (count($savedroles) > 0){
-				delete_post_meta($post_id, 'P_F_A_roles');
+				delete_post_meta($post_id, 'pfa_post_meta_roles');
 			}
 		}
 		if (isset($_POST['P_F_A_users']) && !empty($_POST['P_F_A_users'])){
@@ -511,7 +451,7 @@ function Private_file_area_box_inner_save( $post_id ) {
 
 public function Private_file_area_filter($content) {
 	global $post, $current_user;
-	$savedoptions = get_post_meta($post->ID, 'P_F_A_options', true);
+	$savedoptions = get_post_meta($post->ID, 'pfa_options_page', true);
 	$m = get_post_meta($post->ID, 'P_F_A_message', true);
 	if (isset($savedoptions) && !empty($savedoptions)){
 			// none logged-in only
@@ -528,7 +468,7 @@ public function Private_file_area_filter($content) {
 				}
 			}
 		}
-		$savedroles = get_post_meta($post->ID, 'P_F_A_roles',true);
+		$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles',true);
 		$run_check = 0;
 		$savedusers = get_post_meta($post->ID, 'P_F_A_users',true);
 		if (!count($savedusers) > 0 && !count($savedroles) > 0 ){
@@ -594,7 +534,6 @@ public function Private_file_area_shortcode($atts, $content = null){
 			$blocked_message = $blocked_meassage;
 		}
 
-		$options = $this->P_F_A_get_option('P_F_A');
 		global $current_user;
         get_currentuserinfo();
 		// http://codex.wordpress.org/Function_Reference/get_currentuserinfo
@@ -634,8 +573,7 @@ public function displayMessage($m){
 		if (isset($m) && $m != ''){
 			return apply_filters('private_file_area_blocked',$m,$post);
 		}else{
-			$options = $this->P_F_A_get_option('P_F_A');
-			return apply_filters('private_file_area_blocked',$options['b_massage'],$post);
+			return apply_filters('private_file_area_blocked',$this->options['blocked_message'],$post);
 		}
 	}
 }//end class protected_P_F_A
