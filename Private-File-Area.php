@@ -420,7 +420,7 @@ class private_file_area {
 				if (!in_array($current_user->user_login, $atts['user_name'])) {
 					return $this->displayMessage($atts['blocked_message']);
 				}
-			} else if (!empty(atts['user_role'])) {
+			} else if (!empty($atts['user_role'])) {
 				$atts['user_role'] = explode(',', $atts['user_role']);
 
 				if (!in_array($this->pfa_get_current_user_role(), $atts['user_role'])) {
