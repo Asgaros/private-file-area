@@ -83,7 +83,7 @@ function private_custom_upload_dir($path) {
 
 
 
-class protected_P_F_A {
+class private_file_area {
 	var $saved = false;
 	var $localization_domain = 'pfa';
 	var $options = array();
@@ -99,24 +99,20 @@ class protected_P_F_A {
 		$this->options = array_merge($this->options_default, get_option('pfa_options', array()));
 
 		add_action('add_meta_boxes', array($this, 'pfa_meta_box'));
-
-		// save meta box
-		add_action('save_post', array($this, 'Private_file_area_box_inner_save'));
-
-		// add shortcodes
-		add_shortcode('PFA', array($this, 'Private_file_area_shortcode')); // http://codex.wordpress.org/Function_Reference/add_shortcode
+		add_action('save_post', array($this, 'pfa_meta_box_save'));
+		add_action('init', array($this, 'pfa_init'));
+		add_action('init', array($this, 'create_post_type'));
+		add_shortcode('PFA', array($this, 'pfa_shortcode'));
 
 		// Admin options page
 		add_action('admin_menu', array($this, 'pfa_admin_page'));
 		add_action('admin_init', array($this, 'pfa_save_settings'));
 		add_action('admin_enqueue_scripts', array($this, 'pfa_admin_enqueue_scripts'));
 
-		// add_filter hooks
-		add_action('init', array($this, 'P_F_A_init'));
-		add_action('init', array($this, 'create_post_type'));
-		//add_filter('404_template', array($this, 'private_filter'));
+
+
+
 		add_filter('parse_query', array($this, 'private_files_only'));
-		// http://codex.wordpress.org/Function_Reference/add_filter
 
 		// language setup
 		$locale = get_locale();
@@ -245,6 +241,227 @@ class protected_P_F_A {
 		register_post_type('private_post', $args);
 	}
 
+	// Adding a meta box to the private_post edit screen
+	public function pfa_meta_box() {
+		add_meta_box('pfa_meta_box', __('Accessibility settings', 'pfa'), array($this, 'pfa_meta_box_inner'), 'private_post');
+	}
+
+	// Printing the box content of the meta box
+	public function pfa_meta_box_inner() {
+		global $post, $wp_roles;
+
+		// Get our options
+		$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles', true);
+		$savedusers = get_post_meta($post->ID, 'pfa_post_meta_users', true);
+		$savedoptions = get_post_meta($post->ID, 'pfa_post_meta_options', true);
+
+		// Use nonce for verification
+		wp_nonce_field('pfa_meta_box_inner_action', 'pfa_meta_box_inner');
+
+		if ($this->options['list_roles']) {
+			echo '<h4>'.__('Limit access by User Role:', 'pfa').'</h4>';
+			foreach ($wp_roles->role_names as $name) {
+				echo '<label><input type="checkbox" name="pfa_post_meta_roles[]" value="'.$name.'"';
+
+				if (!empty($savedroles) && in_array($name, $savedroles)) {
+					echo ' checked';
+				}
+
+				echo '> '.$name.'</label>';
+			}
+		}
+
+		if ($this->options['list_users']) {
+			echo '<h4>'.__('Limit access by User Name:', 'pfa').'</h4>';
+			$user = get_current_user_id(); // http://codex.wordpress.org/Function_Reference/get_current_user_id
+			$user_groupnames = wp_get_object_terms($user, 'user-group', array('fields' => 'names')); // http://codex.wordpress.org/Function_Reference/wp_get_object_terms
+
+			foreach ($user_groupnames as $groupname) {
+				$blogusers = get_users(array('blog_id' => $GLOBALS['blog_id'], 'orderby'=> 'ID')); // http://codex.wordpress.org/Function_Reference/get_users
+
+				echo '<h5>'.esc_html($groupname).':</h5>';
+
+				foreach ($blogusers as $user) {
+					$groupsForUserCheck = false;
+					$groupsForUser = wp_get_object_terms($user->ID, 'user-group', array('fields' => 'names'));
+					foreach ($groupsForUser as $groupCheck) {
+						if (esc_html($groupname) == esc_html($groupCheck)) {
+							$groupsForUserCheck = true;
+						}
+					}
+
+					if ($groupsForUserCheck) {
+						echo '<label><input type="checkbox" name="pfa_post_meta_users[]" value="'.$user->ID.'"';
+						if (!empty($savedusers) && in_array($user->ID, $savedusers)) {
+							echo ' checked';
+						}
+						echo '> '.$user->display_name.'</label>';
+					}
+				}
+			}
+		}
+
+		echo '<h4>'.__('Limit access by login status:', 'pfa').'</h4>';
+		echo '<label><input type="checkbox" name="pfa_post_meta_options[logged]" value="1"';
+		if (isset($savedoptions['logged']) && $savedoptions['logged'] == 1){
+			echo ' checked';
+		}
+		echo '> '.__('Logged in users only', 'pfa').'</label>';
+
+		echo '<label><input type="checkbox" name="pfa_post_meta_options[non_logged]" value="1"';
+		if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1){
+			echo ' checked';
+		}
+		echo '> '.__('Non logged in users only', 'pfa').'</label>';
+
+		echo '<h4>'.__('Content Blocked message:', 'pfa').'</h4>';
+		echo '<textarea name="pfa_message" id="pfa_message">'.get_post_meta($post->ID, 'pfa_message', true).'</textarea><br/>';
+		echo __('This message will be shown to anyone who is not on the list above.', 'pfa');
+
+		echo '<h4>'.__('Shortcode:', 'pfa').'</h4>';
+		echo '<p>'.__('You can use a shortcode', 'pfa').' <b>[PFA]</b> '.__('which accepts the following parameters:', 'pfa').'</p>';
+		echo '<p>';
+			echo '<b>user_id:</b> '.__('specific user ids form more then one separate by comma', 'pfa').'<br />';
+			echo '<b>user_name:</b> '.__('specific user names form more then one separate by comma', 'pfa').'<br />';
+			echo '<b>user_role:</b> '.__('specific user role form more then one separate by comma', 'pfa').'<br />';
+			echo '<b>blocked_message:</b> '.__('specific Content Blocked message', 'pfa');
+		echo '</p>';
+		echo '<p><b>'.__('Examples:', 'pfa').'</b>';
+			echo '<pre>[PFA user_name="Dimitri Waechter", "Armin Fuhrmann"]content goes here[/PFA]</pre>';
+			echo '<pre>[PFA user_id=1,2,3]content goes here[/PFA]</pre>';
+			echo '<pre>[PFA user_role=Editor,Author]content goes here[/PFA]</pre>';
+			echo __('Or in any combination like ...', 'psa');
+			echo '<pre>[PFA user_role="Administrator" blocked_message="admins only!"]'.__('admin content goes here', 'pfa').'[/PFA]</pre>';
+		echo '</p>';
+	}
+
+	// Save content of the meta box if post is saved
+	function pfa_meta_box_save($post_id) {
+		// Verify if this came from our screen and with proper authorization, because save_post can be triggered at other times.
+		if (isset($_POST['pfa_meta_box_inner'])){
+			if (!wp_verify_nonce($_POST['pfa_meta_box_inner'], 'pfa_meta_box_inner_action')) {
+				return;
+			}
+		} else {
+			return;
+		}
+
+		// If this is an autosave, our form has not been submitted, so we don't want to do anything.
+		if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+			return;
+		}
+
+		if (isset($_POST['pfa_post_meta_options']) && !empty($_POST['pfa_post_meta_options'])) {
+			$new_savedoptions = array();
+
+			foreach ($_POST['pfa_post_meta_options'] as $key => $value) {
+				$new_savedoptions[$key] = $value;
+			}
+
+			update_post_meta($post_id, 'pfa_post_meta_options', $new_savedoptions);
+		} else {
+			delete_post_meta($post_id, 'pfa_post_meta_options');
+		}
+
+		if (isset($_POST['pfa_post_meta_roles']) && !empty($_POST['pfa_post_meta_roles'])) {
+			$new_roles = array();
+
+			foreach ($_POST['pfa_post_meta_roles'] as $role) {
+				$new_roles[] = $role;
+			}
+
+			update_post_meta($post_id, 'pfa_post_meta_roles', $new_roles);
+		} else {
+			delete_post_meta($post_id, 'pfa_post_meta_roles');
+		}
+
+		if (isset($_POST['pfa_post_meta_users']) && !empty($_POST['pfa_post_meta_users'])) {
+			$new_users = array();
+
+			foreach ($_POST['pfa_post_meta_users'] as $user) {
+				$new_users[] = $user;
+			}
+
+			update_post_meta($post_id, 'pfa_post_meta_users', $new_users);
+		} else {
+			delete_post_meta($post_id, 'pfa_post_meta_users');
+		}
+
+		if (isset($_POST['pfa_message'])) {
+			update_post_meta($post_id, 'pfa_message', $_POST['pfa_message']);
+		}
+	}
+
+	// Shortcode function
+	public function pfa_shortcode($atts, $content = null) {
+		global $current_user;
+
+		$atts = shortcode_atts(array(
+			'user_id' => '',
+			'user_name' => '',
+			'user_role' => '',
+			'blocked_message' => ''
+		), $atts);
+
+		if (!empty($atts['user_id']) || !empty($atts['user_name']) || !empty($atts['user_role'])) {
+			if (!is_user_logged_in()) {
+				return $this->displayMessage($atts['blocked_message']);
+			}
+
+			if (!empty($atts['user_id'])) {
+				$atts['user_id'] = explode(',', $atts['user_id']);
+
+				if (!in_array($current_user->ID, $atts['user_id'])) {
+					return $this->displayMessage($atts['blocked_message']);
+				}
+			} else if (!empty($atts['user_name'])) {
+				$atts['user_name'] = explode(',', $atts['user_name']);
+
+				if (!in_array($current_user->user_login, $atts['user_name'])) {
+					return $this->displayMessage($atts['blocked_message']);
+				}
+			} else if (!empty(atts['user_role'])) {
+				$atts['user_role'] = explode(',', $atts['user_role']);
+
+				if (!in_array($this->pfa_get_current_user_role(), $atts['user_role'])) {
+					return $this->displayMessage($atts['blocked_message']);
+				}
+			}
+		}
+
+		return do_shortcode($content);
+	}
+
+	public function displayMessage($message) {
+		global $post;
+
+		if (!empty($message)) {
+			return __($message, 'pfa');
+		} else {
+			return __($this->options['blocked_message'], 'pfa');
+		}
+	}
+
+	public function pfa_init() {
+		if ($this->options['run_on_the_content']) {
+			add_filter('the_content', array($this, 'pfa_filter'));
+		}
+
+		if ($this->options['run_on_the_excerpt']) {
+			add_filter('the_excerpt', array($this, 'pfa_filter'));
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
 	// function to show only files from current owner in the media library (author-area)
 	function private_files_only($wp_query) {
 		if (strpos($_SERVER['REQUEST_URI'], '/wp-admin/upload.php') !== false) {
@@ -258,180 +475,17 @@ class protected_P_F_A {
 
 	// we need parse_query above at add_filter hooks section
 
-	// init for P_F_A
-	public function P_F_A_init() {
-		if ($this->options['run_on_the_content']) {
-			// hook the_content to filter users
-			add_filter('the_content', array($this, 'Private_file_area_filter'));
-			// http://codex.wordpress.org/Function_Reference/add_filter
-		}
-
-		if ($this->options['run_on_the_excerpt']) {
-			// hook the_excerpt to filter users
-			add_filter('the_excerpt', array($this, 'Private_file_area_filter'));
-		}
-
-		//allow other filters
-		do_action('Private_file_area_filter_add', $this);
-		// http://codex.wordpress.org/Function_Reference/do_action
-	}
-
-// Adding a meta box to the private_post edit screen
-public function pfa_meta_box() {
-	add_meta_box('pfa_meta_box', __('Accessibility settings', 'pfa'), array($this, 'pfa_meta_box_inner'), 'private_post');
-}
-
-// Printing the box content of the meta box
-public function pfa_meta_box_inner() {
-	global $post, $wp_roles;
-
-	// Get our options
-	$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles', true);
-	$savedusers = get_post_meta($post->ID, 'P_F_A_users', true);
-	$savedoptions = get_post_meta($post->ID, 'pfa_options_page', true);
-
-	// Use nonce for verification
-	wp_nonce_field('pfa_meta_box_inner_action', 'pfa_meta_box_inner');
-
-	if ($this->options['list_roles']) {
-		echo '<h4>'.__('Limit access by User Role:', 'pfa').'</h4>';
-		foreach ($wp_roles->role_names as $name) {
-			echo '<label><input type="checkbox" name="pfa_post_meta_roles[]" value="'.$name.'"';
-
-			if (!empty($savedroles) && in_array($name, $savedroles)) {
-				echo ' checked';
-			}
-
-			echo '> '.$name.'</label>';
-		}
-	}
-
-	if ($this->options['list_users']) {
-		echo '<h4>'.__('Limit access by User Name:', 'pfa').'</h4>';
-		$user = get_current_user_id(); // http://codex.wordpress.org/Function_Reference/get_current_user_id
-		$user_groupnames = wp_get_object_terms($user, 'user-group', array('fields' => 'names')); // http://codex.wordpress.org/Function_Reference/wp_get_object_terms
-
-		foreach ($user_groupnames as $groupname) {
-			$blogusers = get_users(array('blog_id' => $GLOBALS['blog_id'], 'orderby'=> 'ID')); // http://codex.wordpress.org/Function_Reference/get_users
-
-			echo '<h5>'.esc_html($groupname).':</h5>';
-
-			foreach ($blogusers as $user) {
-				$groupsForUserCheck = false;
-				$groupsForUser = wp_get_object_terms($user->ID, 'user-group', array('fields' => 'names'));
-				foreach ($groupsForUser as $groupCheck) {
-					if (esc_html($groupname) == esc_html($groupCheck)) {
-						$groupsForUserCheck = true;
-					}
-				}
-
-				if ($groupsForUserCheck) {
-					echo '<label><input type="checkbox" name="P_F_A_users[]" value="'.$user->ID.'"';
-					if (!empty($savedusers) && in_array($user->ID, $savedusers)) {
-						echo ' checked';
-					}
-					echo '> '.$user->display_name.'</label>';
-				}
-			}
-		}
-	}
-
-	echo '<h4>'.__('Limit access by login status:', 'pfa').'</h4>';
-	echo '<label><input type="checkbox" name="pfa_options_page[logged]" value="1"';
-	if (isset($savedoptions['logged']) && $savedoptions['logged'] == 1){
-		echo ' checked';
-	}
-	echo '> '.__('Logged in users only', 'pfa').'</label>';
-
-	echo '<label><input type="checkbox" name="pfa_options_page[non_logged]" value="1"';
-	if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1){
-		echo ' checked';
-	}
-	echo '> '.__('Non logged in users only', 'pfa').'</label>';
-
-	echo '<h4>'.__('Content Blocked message:', 'pfa').'</h4>';
-	echo '<textarea name="P_F_A_message" id="P_F_A_message">'.get_post_meta($post->ID, 'P_F_A_message', true).'</textarea><br/>';
-	echo __('This message will be shown to anyone who is not on the list above.', 'pfa');
-
-	// shortcodes explaination
-	echo '<h4>'.__('Shortcode:', 'pfa').'</h4>';
-	echo '<p>'.__('You can use a shortcode','pfa').' <b>[PFA]</b> '.__('which accepts the following parameters:', 'pfa').'</p>';
-	echo '<p>';
-		echo '<b>user_id:</b> '.__('specific user ids form more then one separate by comma', 'pfa').'<br />';
-		echo '<b>user_name:</b> '.__('specific user names form more then one separate by comma', 'pfa').'<br />';
-		echo '<b>user_role:</b> '.__('specific user role form more then one separate by comma', 'pfa').'<br />';
-		echo '<b>blocked_message:</b> '.__('specific Content Blocked message', 'pfa');
-	echo '</p>';
-	echo '<p><b>'.__('Examples:', 'pfa').'</b>';
-		echo '<pre>[PFA user_name="Dimitri Waechter", "Armin Fuhrmann"]content goes here[/PFA]</pre>';
-		echo '<pre>[PFA user_id=1,2,3]content goes here[/PFA]</pre>';
-		echo '<pre>[PFA user_role=Editor,Author]content goes here[/PFA]</pre>';
-		echo __('Or in any combination like ...', 'psa');
-		echo '<pre>[PFA user_role="Administrator" blocked_message="admins only!"]'.__('admin content goes here', 'pfa').'[/PFA]</pre>';
-	echo '</p>';
-}
-
-// save custom data if post is saved
-function Private_file_area_box_inner_save( $post_id ) {
-		global $post;
-		  // verify if this came from our screen and with proper authorization,
-		  // because save_post can be triggered at other times
-		if (isset($_POST['pfa_meta_box_inner'])){
-			if ( !wp_verify_nonce( $_POST['pfa_meta_box_inner'], 'pfa_meta_box_inner_action' ) )
-				return $post_id;
-		}else{
-			return $post_id;
-		} // http://codex.wordpress.org/Function_Reference/wp_verify_nonce
-		  // verify if this is an auto save routine
-		  // if it is auto sved our form has not been submitted, so we dont want to do pass anything
-		  if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE )
-			  return $post_id;
-		  // OK, we're authenticated: we need to find and save the data
-		$savedroles = get_post_meta($post_id, 'pfa_post_meta_roles',true);
-		$savedusers = get_post_meta($post_id, 'P_F_A_users',true);
-		$savedoptions = get_post_meta($post->ID, 'pfa_options_page',true);
-		// http://codex.wordpress.org/Function_Reference/get_post_meta
-
-		if (isset($_POST['pfa_options_page']) && !empty($_POST['pfa_options_page'] )){
-			foreach ($_POST['pfa_options_page'] as $key => $value ){
-				$new_savedoptions[$key] = $value;
-			}
-			update_post_meta($post_id, 'pfa_options_page', $new_savedoptions);
-		// http://codex.wordpress.org/Function_Reference/update_post_meta
-		}else{
-			 delete_post_meta($post_id, 'pfa_options_page');
-		// http://codex.wordpress.org/Function_Reference/delete_post_meta
-		}
-		if (isset($_POST['pfa_post_meta_roles']) && !empty($_POST['pfa_post_meta_roles'] )){
-			foreach ($_POST['pfa_post_meta_roles'] as $role){
-				$new_roles[] = $role;
-			}
-			update_post_meta($post_id, 'pfa_post_meta_roles', $new_roles);
-		}else{
-			if (count($savedroles) > 0){
-				delete_post_meta($post_id, 'pfa_post_meta_roles');
-			}
-		}
-		if (isset($_POST['P_F_A_users']) && !empty($_POST['P_F_A_users'])){
-			foreach ($_POST['P_F_A_users'] as $u){
-				$new_users[] = $u;
-			}
-			update_post_meta($post_id, 'P_F_A_users', $new_users);
-		}else{
-			if (count($savedusers) > 0){
-				 delete_post_meta($post_id, 'P_F_A_users');
-			}
-		}
-		if (isset($_POST['P_F_A_message'])){
-			update_post_meta($post_id,'P_F_A_message', $_POST['P_F_A_message']);
-		}
-	} // end Private_file_area_box_inner_save()
 
 
-public function Private_file_area_filter($content) {
+
+
+
+
+
+public function pfa_filter($content) {
 	global $post, $current_user;
-	$savedoptions = get_post_meta($post->ID, 'pfa_options_page', true);
-	$m = get_post_meta($post->ID, 'P_F_A_message', true);
+	$savedoptions = get_post_meta($post->ID, 'pfa_post_meta_options', true);
+	$m = get_post_meta($post->ID, 'pfa_message', true);
 	if (isset($savedoptions) && !empty($savedoptions)){
 			// none logged-in only
 			if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1){
@@ -449,7 +503,7 @@ public function Private_file_area_filter($content) {
 		}
 		$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles',true);
 		$run_check = 0;
-		$savedusers = get_post_meta($post->ID, 'P_F_A_users',true);
+		$savedusers = get_post_meta($post->ID, 'pfa_post_meta_users',true);
 		if (!count($savedusers) > 0 && !count($savedroles) > 0 ){
 			return $content;
 			exit;
@@ -485,7 +539,7 @@ public function Private_file_area_filter($content) {
 			return $this->displayMessage($m);
 		}
 		return $content;
-	} // end Private_file_area_filter()
+	} // end pfa_filter()
 
 // helper functions
 public function pfa_get_current_user_role() {
@@ -496,67 +550,9 @@ public function pfa_get_current_user_role() {
 		return isset($wp_roles->role_names[$role]) ? translate_user_role($wp_roles->role_names[$role] ) : false;
 	} // end pfa_get_current_user_role()
 
-// shortcodes functions
-public function Private_file_area_shortcode($atts, $content = null){
-		// http://codex.wordpress.org/Function_Reference/shortcode_atts
-		extract(shortcode_atts(array(
-	        "user_id" => '',
-			"user_name" => '',
-			"user_role" => '',
-			"blocked_message" => '',
-			"blocked_meassage" => null
-	    ), $atts));
 
+}
 
-		global $post;
-		if ($blocked_meassage !== null){
-			$blocked_message = $blocked_meassage;
-		}
+$privatefilearea = new private_file_area();
 
-		global $current_user;
-        get_currentuserinfo();
-		// http://codex.wordpress.org/Function_Reference/get_currentuserinfo
-		if ($user_id != '' || $user_name != '' || $user_role != ''){
-
-			// check logged in
-			if (!is_user_logged_in()){
-				return $this->displayMessage($blocked_message);
-			}
-			// check user id
-			if (isset($user_id) && $user_id != '' ){
-				$user_id = explode(",", $user_id);
-				if (!in_array($current_user->ID,$user_id)){
-					return $this->displayMessage($blocked_message);
-				}
-			}
-			// check user name
-			if (isset($user_name) && $user_name != '' ){
-				$user_name = explode(",", $user_name);
-				if (!in_array($current_user->user_login,$user_name)){
-					return $this->displayMessage($blocked_message);
-				}
-			}
-			// check user role
-			if (isset($user_role) && $user_role != '' ){
-				$user_role = explode(",", $user_role);
-				if (!in_array($this->pfa_get_current_user_role(),$user_role)){
-					return $this->displayMessage($blocked_message);
-				}
-			}
-		}
-		return apply_filters('private_file_area_shortcode_filter',do_shortcode($content));
-	}
-
-public function displayMessage($m){
-		global $post;
-		if (isset($m) && $m != ''){
-			return apply_filters('private_file_area_blocked',$m,$post);
-		}else{
-			return apply_filters('private_file_area_blocked',$this->options['blocked_message'],$post);
-		}
-	}
-}//end class protected_P_F_A
-$P_F_A_i = new protected_P_F_A();
-
-// adduserid
 ?>
