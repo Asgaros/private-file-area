@@ -24,64 +24,10 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// TODO: When file is uploaded to private area directory, it will be shown in media library. But the file will not be linked correctly.
-
-// THIS PLUGIN WORKS ONLY IN COMBINATION WITH PLUGIN "User Groups" by Katz Web Services, Inc.!
-
 // Disallow direct access to the plugin file for security reasons.
 if (basename($_SERVER['PHP_SELF']) == basename (__FILE__)) {
 	die('Sorry, but you cannot access this page directly.');
 }
-
-// change upload directory for custom post type
-// attachments will now be uploaded to an "uploads" directory within our plugin folder
-// ../wp-content/plugins/private-file-area/priv_uploads
-function custom_upload_directory($args) {
-	/*$id = $_REQUEST['post_id'];
-    $parent = get_post($id)->post_parent; // http://codex.wordpress.org/Function_Reference/get_post
-
-	// Check the post-type of the current post and if it's type private then set path-variables
-	if (get_post_type($id) == "private_post" || get_post_type($parent) == "private_post") {
-        $args['path'] = plugin_dir_path(__FILE__)."priv_uploads"; // http://codex.wordpress.org/Function_Reference/plugin_dir_path
-        $args['url'] = plugin_dir_url(__FILE__)."priv_uploads";
-        $args['basedir'] = plugin_dir_path(__FILE__)."priv_uploads";
-        $args['baseurl'] = plugin_dir_url(__FILE__)."priv_uploads";
-    }
-
-    return $args;*/
-}
-
-//add_filter('upload_dir', 'custom_upload_directory');
-
-
-
-
-
-add_filter('wp_handle_upload_prefilter', 'private_pre_upload');
-add_filter('wp_handle_upload', 'private_post_upload');
-
-function private_pre_upload($file) {
-    add_filter('upload_dir', 'private_custom_upload_dir');
-    return $file;
-}
-
-function private_post_upload($fileinfo) {
-    remove_filter('upload_dir', 'private_custom_upload_dir');
-    return $fileinfo;
-}
-
-function private_custom_upload_dir($path) {
-    $customdir = '/private';
-    $path['path'] = str_replace($path['subdir'], '', $path['path']);
-    $path['url'] = str_replace($path['subdir'], '', $path['url']);
-    $path['subdir'] = $customdir;
-    $path['path'] .= $customdir;
-    $path['url'] .= $customdir;
-    return $path;
-}
-
-
-
 
 class private_file_area {
 	var $saved = false;
@@ -104,20 +50,17 @@ class private_file_area {
 		add_action('init', array($this, 'create_post_type'));
 		add_shortcode('PFA', array($this, 'pfa_shortcode'));
 
+		// Media Library Stuff
+		add_filter('upload_dir', array($this, 'private_custom_upload_dir'));
+		add_filter('parse_query', array($this, 'private_files_only'));
+
 		// Admin options page
 		add_action('admin_menu', array($this, 'pfa_admin_page'));
 		add_action('admin_init', array($this, 'pfa_save_settings'));
 		add_action('admin_enqueue_scripts', array($this, 'pfa_admin_enqueue_scripts'));
 
-
-
-
-		add_filter('parse_query', array($this, 'private_files_only'));
-
-		// language setup
-		$locale = get_locale();
-		load_plugin_textdomain( $this->localization_domain, false, dirname( plugin_basename( __FILE__ ) ) . '/lang/' );
-		// http://codex.wordpress.org/Function_Reference/load_plugin_textdomain
+		// Language setup
+		load_plugin_textdomain('pfa', false, plugin_basename(dirname(__FILE__)).'/translations/');
 	}
 
 	// Administration menu
@@ -452,6 +395,69 @@ class private_file_area {
 		}
 	}
 
+	public function pfa_filter($content) {
+		global $post, $current_user;
+		$savedoptions = get_post_meta($post->ID, 'pfa_post_meta_options', true);
+		$message = get_post_meta($post->ID, 'pfa_message', true);
+
+		if (isset($savedoptions) && !empty($savedoptions)) {
+			if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1) {
+				if (is_user_logged_in()) {
+					return $this->displayMessage($message);
+				}
+			}
+
+			if (isset($savedoptions['logged']) && $savedoptions['logged'] == 1) {
+				if (!is_user_logged_in()) {
+					return $this->displayMessage($message);
+				}
+			}
+		}
+
+		$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles', true);
+		$savedusers = get_post_meta($post->ID, 'pfa_post_meta_users', true);
+		$run_check = 0;
+
+		if (!count($savedusers) > 0 && !count($savedroles) > 0 ) {
+			return $content;
+			exit;
+		}
+
+		if (!empty($savedroles)) {
+			$cu_r = $this->pfa_get_current_user_role();
+
+			if ($cu_r && in_array($cu_r, $savedroles)) {
+				return $content;
+				exit;
+			}
+
+			$run_check++;
+		}
+
+		if (!empty($savedusers)) {
+			if (in_array($current_user->ID, $savedusers)) {
+				return $content;
+				exit;
+			}
+
+			$run_check++;
+		}
+
+		if ($run_check > 0) {
+			return $this->displayMessage($message);
+			exit;
+		}
+
+		return $content;
+	}
+
+	public function pfa_get_current_user_role() {
+		global $wp_roles;
+		$current_user = wp_get_current_user();
+		$role = array_shift($current_user->roles);
+
+		return isset($wp_roles->role_names[$role]) ? translate_user_role($wp_roles->role_names[$role]) : false;
+	}
 
 
 
@@ -459,6 +465,32 @@ class private_file_area {
 
 
 
+
+
+
+
+	function private_custom_upload_dir($path) {
+		if (!isset($_REQUEST['action']) || $_REQUEST['action'] !== 'upload-attachment') {
+        	return $path;
+    	}
+
+		if (!isset($_REQUEST['post_id'])) {
+			return $path;
+		}
+
+		$type = get_post_type($_REQUEST['post_id']);
+
+		if ($type == 'private_post') {
+			$customdir = '/private';
+		    $path['path'] = str_replace($path['subdir'], '', $path['path']);
+		    $path['url'] = str_replace($path['subdir'], '', $path['url']);
+		    $path['subdir'] = $customdir;
+		    $path['path'] .= $customdir;
+		    $path['url'] .= $customdir;
+		}
+
+		return $path;
+	}
 
 
 
@@ -482,73 +514,7 @@ class private_file_area {
 
 
 
-public function pfa_filter($content) {
-	global $post, $current_user;
-	$savedoptions = get_post_meta($post->ID, 'pfa_post_meta_options', true);
-	$m = get_post_meta($post->ID, 'pfa_message', true);
-	if (isset($savedoptions) && !empty($savedoptions)){
-			// none logged-in only
-			if (isset($savedoptions['non_logged']) && $savedoptions['non_logged'] == 1){
-				if (is_user_logged_in()){
-					// http://codex.wordpress.org/Function_Reference/is_user_logged_in
-					return $this->displayMessage($m);
-				}
-			}
-			// logged-in users only
-			if (isset($savedoptions['logged']) && $savedoptions['logged'] == 1){
-				if (!is_user_logged_in()){
-					return $this->displayMessage($m);
-				}
-			}
-		}
-		$savedroles = get_post_meta($post->ID, 'pfa_post_meta_roles',true);
-		$run_check = 0;
-		$savedusers = get_post_meta($post->ID, 'pfa_post_meta_users',true);
-		if (!count($savedusers) > 0 && !count($savedroles) > 0 ){
-			return $content;
-			exit;
-		}
-		// ...by role
-		if (isset($savedroles) && !empty($savedroles)){
-			get_currentuserinfo();
-			$cu_r = $this->pfa_get_current_user_role();
-			if ($cu_r){
-				if (in_array($cu_r,$savedroles)){
-					return $content;
-					exit;
-				}else{
-					$run_check = 1;
-				}
-			}else{
-			// failed role check
-				$run_check = 1;
-			}
-		}
-		// ...by user
-		if (isset($savedusers) && !empty($savedusers)){
-			get_currentuserinfo();
-			if (in_array($current_user->ID,$savedusers)){
-				return $content;
-			}else{
-				$run_check = $run_check + 1;
-			}
-			// failed both checks
-			return $this->displayMessage($m);
-		}
-		if ($run_check > 0){
-			return $this->displayMessage($m);
-		}
-		return $content;
-	} // end pfa_filter()
 
-// helper functions
-public function pfa_get_current_user_role() {
-		global $wp_roles;
-		$current_user = wp_get_current_user();
-		$roles = $current_user->roles;
-		$role = array_shift($roles);
-		return isset($wp_roles->role_names[$role]) ? translate_user_role($wp_roles->role_names[$role] ) : false;
-	} // end pfa_get_current_user_role()
 
 
 }
