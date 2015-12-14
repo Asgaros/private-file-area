@@ -3,7 +3,7 @@
   Plugin Name: Private File Area
   Plugin URI: https://github.com/Asgaros/private-file-area
   Description: This plugin is to show content only for whom the content is intended.
-  Version: 1.0.3 Development-Version
+  Version: 1.0.3
   Author: Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser
   Author URI: https://chinger-coorp.fb2.frankfurt-university.de/
   Text Domain: pfa
@@ -52,7 +52,6 @@ class private_file_area {
 
 		// Media Library Stuff
 		add_filter('upload_dir', array($this, 'private_custom_upload_dir'));
-		add_filter('parse_query', array($this, 'private_files_only'));
 
 		// Admin options page
 		add_action('admin_menu', array($this, 'pfa_admin_page'));
@@ -459,16 +458,6 @@ class private_file_area {
 		return isset($wp_roles->role_names[$role]) ? translate_user_role($wp_roles->role_names[$role]) : false;
 	}
 
-
-
-
-
-
-
-
-
-
-
 	function private_custom_upload_dir($path) {
 		if (!isset($_REQUEST['action']) || $_REQUEST['action'] !== 'upload-attachment') {
         	return $path;
@@ -491,32 +480,6 @@ class private_file_area {
 
 		return $path;
 	}
-
-
-
-	// function to show only files from current owner in the media library (author-area)
-	function private_files_only($wp_query) {
-		if (strpos($_SERVER['REQUEST_URI'], '/wp-admin/upload.php') !== false) {
-			if (!current_user_can('level_5')) {
-				// http://codex.wordpress.org/Function_Reference/current_user_can
-				global $current_user;
-				$wp_query->set('author', $current_user->id);
-			}
-		}
-	}
-
-	// we need parse_query above at add_filter hooks section
-
-
-
-
-
-
-
-
-
-
-
 }
 
 $privatefilearea = new private_file_area();
