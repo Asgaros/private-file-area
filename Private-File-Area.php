@@ -3,7 +3,7 @@
   Plugin Name: Private File Area
   Plugin URI: https://github.com/Asgaros/private-file-area
   Description: This plugin is to show content only for whom the content is intended.
-  Version: 1.0.3
+  Version: 1.0.4
   Author: Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser
   Author URI: https://chinger-coorp.fb2.frankfurt-university.de/
   Text Domain: pfa
@@ -59,7 +59,7 @@ class private_file_area {
 		add_action('admin_enqueue_scripts', array($this, 'pfa_admin_enqueue_scripts'));
 
 		// Language setup
-		load_plugin_textdomain('pfa', false, plugin_basename(dirname(__FILE__)).'/translations/');
+		load_plugin_textdomain('pfa', false, plugin_basename(dirname(__FILE__)).'/languages/');
 	}
 
 	// Administration menu

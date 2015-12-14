@@ -1,0 +1,174 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Private File Area\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: Mon Dec 14 2015 18:40:57 GMT+0100 (Mitteleuropäische "
+"Zeit)\n"
+"PO-Revision-Date: Mon Dec 14 2015 18:48:44 GMT+0100 (Mitteleuropäische Zeit)\n"
+"Last-Translator: root <root@localhost.de>\n"
+"Language-Team: \n"
+"Language: German\n"
+"Plural-Forms: nplurals=2; plural=n != 1\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-Basepath: .\n"
+"X-Poedit-SearchPath-0: ..\n"
+"X-Poedit-KeywordsList: _:1;gettext:1;dgettext:2;ngettext:1,2;dngettext:2,3;"
+"__:1;_e:1;_c:1;_n:1,2;_n_noop:1,2;_nc:1,2;__ngettext:1,2;__ngettext_noop:1,2;"
+"_x:1,2c;_ex:1,2c;_nx:1,2,4c;_nx_noop:1,2,3c;_n_js:1,2;_nx_js:1,2,3c;"
+"esc_attr__:1;esc_html__:1;esc_attr_e:1;esc_html_e:1;esc_attr_x:1,2c;"
+"esc_html_x:1,2c;comments_number_link:2,3;t:1;st:1;trans:1;transChoice:1,2\n"
+"X-Generator: Loco - https://localise.biz/\n"
+"X-Loco-Target-Locale: de_DE"
+
+#. Name of the plugin
+msgid "Private File Area"
+msgstr "Private File Area"
+
+#. URI of the plugin
+msgid "https://github.com/Asgaros/private-file-area"
+msgstr "https://github.com/Asgaros/private-file-area"
+
+#. Description of the plugin
+msgid "This plugin is to show content only for whom the content is intended."
+msgstr "Dieses Plugin lässt den Zugang zu Inhalten einschränken."
+
+#. Author of the plugin
+msgid "Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser"
+msgstr "Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser"
+
+#. Author URI of the plugin
+msgid "https://chinger-coorp.fb2.frankfurt-university.de"
+msgstr "https://chinger-coorp.fb2.frankfurt-university.de"
+
+#: ../Private-File-Area.php:73
+msgid "You are not allowed to access this page."
+msgstr "Du hast nicht die Berechtigung, auf diese Seite zuzugreifen."
+
+#: ../Private-File-Area.php:81
+msgid "Your options have been saved."
+msgstr "Deine Einstellungen wurden gespeichert."
+
+#: ../Private-File-Area.php:85
+msgid "General settings:"
+msgstr "Allgemeine Einstellungen:"
+
+#: ../Private-File-Area.php:87
+msgid "Global Blocked message:"
+msgstr "Globale Blockiert-Nachricht:"
+
+#: ../Private-File-Area.php:91
+msgid "Use with \"the_content\" hook:"
+msgstr "Filterung im \"the_content\" Hook:"
+
+#: ../Private-File-Area.php:95
+msgid "Use with \"the_excerpt\" hook:"
+msgstr "Filterung im \"the_excerpt\" Hook:"
+
+#: ../Private-File-Area.php:99
+msgid "MetaBox settings:"
+msgstr "MetaBox Einstellungen:"
+
+#: ../Private-File-Area.php:101
+msgid "List user names:"
+msgstr "Zeige Benutzernamen:"
+
+#: ../Private-File-Area.php:103
+msgid "Sites with a large number of users should uncheck this option."
+msgstr ""
+"Websites mit einer großen Anzahl an Benutzern sollten diese Option "
+"deaktivieren."
+
+#: ../Private-File-Area.php:106
+msgid "List user roles:"
+msgstr "Zeige Benutzerrollen:"
+
+#: ../Private-File-Area.php:108
+msgid "Sites with a large number of user roles should uncheck this option."
+msgstr ""
+"Websites mit einer großen Anzahl an Benutzerrollen sollten diese Option "
+"deaktivieren."
+
+#: ../Private-File-Area.php:111
+msgid "Save Options"
+msgstr "Speichere Einstellungen"
+
+#: ../Private-File-Area.php:188
+msgid "Accessibility settings"
+msgstr "Zugangseinstellungen"
+
+#: ../Private-File-Area.php:204
+msgid "Limit access by User Role:"
+msgstr "Zugang auf Benutzerrolle limitieren:"
+
+#: ../Private-File-Area.php:217
+msgid "Limit access by User Name:"
+msgstr "Zugang auf Benutzername limitieren:"
+
+#: ../Private-File-Area.php:246
+msgid "Limit access by login status:"
+msgstr "Zugang auf Loginstatus limitieren:"
+
+#: ../Private-File-Area.php:251
+msgid "Logged in users only"
+msgstr "Nur eingeloggte Benutzer"
+
+#: ../Private-File-Area.php:257
+msgid "Non logged in users only"
+msgstr "Nur ausgeloggte Benutzer"
+
+#: ../Private-File-Area.php:259
+msgid "Content Blocked message:"
+msgstr "Inhalt Blockiert-Nachricht:"
+
+#: ../Private-File-Area.php:261
+msgid "This message will be shown to anyone who is not on the list above."
+msgstr ""
+"Diese Nachricht wird jedem Benutzer angezeigt, welcher nicht auf der obigen "
+"Liste ist."
+
+#: ../Private-File-Area.php:263
+msgid "Shortcode:"
+msgstr "Shortcode:"
+
+#: ../Private-File-Area.php:264
+msgid "You can use a shortcode"
+msgstr "Du kannst einen Shortcode benutzen"
+
+#: ../Private-File-Area.php:264
+msgid "which accepts the following parameters:"
+msgstr "welcher die folgenden Parameter akzeptiert:"
+
+#: ../Private-File-Area.php:266
+msgid "specific user ids form more then one separate by comma"
+msgstr "legt Benutzer IDs fest. Mehrere IDs müssen mit einem Komma getrennt werden."
+
+#: ../Private-File-Area.php:267
+msgid "specific user names form more then one separate by comma"
+msgstr ""
+"legt Benutzernamen fest. Mehrere Namen müssen mit einem Komma getrennt "
+"werden."
+
+#: ../Private-File-Area.php:268
+msgid "specific user role form more then one separate by comma"
+msgstr ""
+"legt Benutzerrollen fest. Mehrere Benutzerrollen müssen mit einem Komma "
+"getrennt werden."
+
+#: ../Private-File-Area.php:269
+msgid "specific Content Blocked message"
+msgstr "spezielle Inhalt Blockiert-Nachricht"
+
+#: ../Private-File-Area.php:271
+msgid "Examples:"
+msgstr "Beispiele:"
+
+#: ../Private-File-Area.php:275
+msgid "Or in any combination like ..."
+msgstr "Oder in einer Kombination wie:"
+
+#: ../Private-File-Area.php:276
+msgid "admin content goes here"
+msgstr "Inhalt für Administratoren"

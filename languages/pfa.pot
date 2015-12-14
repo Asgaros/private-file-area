@@ -1,0 +1,167 @@
+# Loco Gettext template
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Private File Area\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: Mon Dec 14 2015 18:40:57 GMT+0100 (Mitteleuropäische "
+"Zeit)\n"
+"POT-Revision-Date: Mon Dec 14 2015 18:48:39 GMT+0100 (Mitteleuropäische "
+"Zeit)\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: \n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-Basepath: .\n"
+"X-Poedit-SearchPath-0: ..\n"
+"X-Poedit-KeywordsList: _:1;gettext:1;dgettext:2;ngettext:1,2;dngettext:2,3;"
+"__:1;_e:1;_c:1;_n:1,2;_n_noop:1,2;_nc:1,2;__ngettext:1,2;__ngettext_noop:1,2;"
+"_x:1,2c;_ex:1,2c;_nx:1,2,4c;_nx_noop:1,2,3c;_n_js:1,2;_nx_js:1,2,3c;"
+"esc_attr__:1;esc_html__:1;esc_attr_e:1;esc_html_e:1;esc_attr_x:1,2c;"
+"esc_html_x:1,2c;comments_number_link:2,3;t:1;st:1;trans:1;transChoice:1,2\n"
+"X-Generator: Loco - https://localise.biz/"
+
+#. Name of the plugin
+msgid "Private File Area"
+msgstr ""
+
+#. URI of the plugin
+msgid "https://github.com/Asgaros/private-file-area"
+msgstr ""
+
+#. Description of the plugin
+msgid "This plugin is to show content only for whom the content is intended."
+msgstr ""
+
+#. Author of the plugin
+msgid "Han Ting, Xue Tianyu, Wang Yitong, Dimitri, Vitaly, Armin, Thomas Belser"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://chinger-coorp.fb2.frankfurt-university.de"
+msgstr ""
+
+#: ../Private-File-Area.php:73
+msgid "You are not allowed to access this page."
+msgstr ""
+
+#: ../Private-File-Area.php:81
+msgid "Your options have been saved."
+msgstr ""
+
+#: ../Private-File-Area.php:85
+msgid "General settings:"
+msgstr ""
+
+#: ../Private-File-Area.php:87
+msgid "Global Blocked message:"
+msgstr ""
+
+#: ../Private-File-Area.php:91
+msgid "Use with \"the_content\" hook:"
+msgstr ""
+
+#: ../Private-File-Area.php:95
+msgid "Use with \"the_excerpt\" hook:"
+msgstr ""
+
+#: ../Private-File-Area.php:99
+msgid "MetaBox settings:"
+msgstr ""
+
+#: ../Private-File-Area.php:101
+msgid "List user names:"
+msgstr ""
+
+#: ../Private-File-Area.php:103
+msgid "Sites with a large number of users should uncheck this option."
+msgstr ""
+
+#: ../Private-File-Area.php:106
+msgid "List user roles:"
+msgstr ""
+
+#: ../Private-File-Area.php:108
+msgid "Sites with a large number of user roles should uncheck this option."
+msgstr ""
+
+#: ../Private-File-Area.php:111
+msgid "Save Options"
+msgstr ""
+
+#: ../Private-File-Area.php:188
+msgid "Accessibility settings"
+msgstr ""
+
+#: ../Private-File-Area.php:204
+msgid "Limit access by User Role:"
+msgstr ""
+
+#: ../Private-File-Area.php:217
+msgid "Limit access by User Name:"
+msgstr ""
+
+#: ../Private-File-Area.php:246
+msgid "Limit access by login status:"
+msgstr ""
+
+#: ../Private-File-Area.php:251
+msgid "Logged in users only"
+msgstr ""
+
+#: ../Private-File-Area.php:257
+msgid "Non logged in users only"
+msgstr ""
+
+#: ../Private-File-Area.php:259
+msgid "Content Blocked message:"
+msgstr ""
+
+#: ../Private-File-Area.php:261
+msgid "This message will be shown to anyone who is not on the list above."
+msgstr ""
+
+#: ../Private-File-Area.php:263
+msgid "Shortcode:"
+msgstr ""
+
+#: ../Private-File-Area.php:264
+msgid "You can use a shortcode"
+msgstr ""
+
+#: ../Private-File-Area.php:264
+msgid "which accepts the following parameters:"
+msgstr ""
+
+#: ../Private-File-Area.php:266
+msgid "specific user ids form more then one separate by comma"
+msgstr ""
+
+#: ../Private-File-Area.php:267
+msgid "specific user names form more then one separate by comma"
+msgstr ""
+
+#: ../Private-File-Area.php:268
+msgid "specific user role form more then one separate by comma"
+msgstr ""
+
+#: ../Private-File-Area.php:269
+msgid "specific Content Blocked message"
+msgstr ""
+
+#: ../Private-File-Area.php:271
+msgid "Examples:"
+msgstr ""
+
+#: ../Private-File-Area.php:275
+msgid "Or in any combination like ..."
+msgstr ""
+
+#: ../Private-File-Area.php:276
+msgid "admin content goes here"
+msgstr ""
